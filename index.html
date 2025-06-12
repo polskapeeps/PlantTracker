@@ -30,127 +30,38 @@
           My Plant Collection
         </h1>
         <p class="text-gray-600 mt-2">
-          A digital garden for your green friends. (Saved Locally)
+          A digital garden for your green friends.
         </p>
+        <p id="userIdDisplay" class="text-xs text-gray-400 mt-2"></p>
       </header>
 
-      <!-- Controls and Filters -->
-      <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <!-- Top Row: Add Button and View Toggle -->
-        <div
-          class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4"
+      <!-- Controls -->
+      <div class="flex justify-center mb-8">
+        <button
+          id="addPlantBtn"
+          class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-transform transform hover:scale-105"
         >
-          <button
-            id="addPlantBtn"
-            class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-transform transform hover:scale-105 w-full sm:w-auto"
-          >
-            <i class="fas fa-plus mr-2"></i> Add New Plant
-          </button>
-
-          <!-- View Toggle -->
-          <div class="flex bg-gray-200 rounded-lg p-1">
-            <button
-              id="gridViewBtn"
-              class="view-toggle-btn px-4 py-2 rounded-md transition-colors duration-200 bg-green-600 text-white"
-            >
-              <i class="fas fa-th mr-2"></i>Grid
-            </button>
-            <button
-              id="listViewBtn"
-              class="view-toggle-btn px-4 py-2 rounded-md transition-colors duration-200 text-gray-700 hover:bg-gray-300"
-            >
-              <i class="fas fa-list mr-2"></i>List
-            </button>
-          </div>
-        </div>
-
-        <!-- Search and Filters -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <!-- Search -->
-          <div class="relative">
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="Search plants..."
-              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-          </div>
-
-          <!-- Plant Type Filter -->
-          <select
-            id="typeFilter"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">All Types</option>
-            <option value="Cactus">Cactus</option>
-            <option value="Succulent">Succulent</option>
-            <option value="Houseplant">Houseplant</option>
-            <option value="Herb">Herb</option>
-            <option value="Tropical Plant">Tropical Plant</option>
-            <option value="Flowering Plant">Flowering Plant</option>
-            <option value="Fern">Fern</option>
-            <option value="Tree/Shrub">Tree/Shrub</option>
-            <option value="Other">Other</option>
-          </select>
-
-          <!-- Watering Status Filter -->
-          <select
-            id="wateringFilter"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">All Plants</option>
-            <option value="overdue">Needs Watering</option>
-            <option value="upcoming">Due Soon (Next 3 Days)</option>
-            <option value="watered">Recently Watered</option>
-          </select>
-
-          <!-- Sort Options -->
-          <select
-            id="sortSelect"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="name">Sort by Name</option>
-            <option value="type">Sort by Type</option>
-            <option value="nextWatering">Sort by Next Watering</option>
-            <option value="dateAdded">Sort by Date Added</option>
-          </select>
-        </div>
-
-        <!-- Group Toggle -->
-        <div class="mt-4 flex items-center">
-          <label class="flex items-center cursor-pointer">
-            <input type="checkbox" id="groupByType" class="mr-2" />
-            <span class="text-sm font-medium text-gray-700"
-              >Group by Plant Type</span
-            >
-          </label>
-        </div>
+          <i class="fas fa-plus mr-2"></i> Add New Plant
+        </button>
       </div>
 
-      <!-- Plant Display Area -->
-      <div id="plantDisplayArea">
-        <!-- Plant Grid/List will be inserted here -->
+      <!-- Plant Grid -->
+      <div
+        id="plantGrid"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      >
+        <!-- Plant cards will be inserted here by JavaScript -->
       </div>
 
-      <!-- Loading State -->
-      <div id="loadingState" class="hidden text-center text-gray-500 py-16">
+      <div id="loadingState" class="text-center text-gray-500 py-16">
         <i class="fas fa-spinner fa-spin fa-3x"></i>
         <p class="mt-4">Loading your collection...</p>
       </div>
 
-      <!-- Empty State -->
       <div id="emptyState" class="hidden text-center text-gray-500 py-16">
         <i class="fas fa-leaf fa-3x text-green-300"></i>
         <p class="mt-4 text-xl">Your collection is empty.</p>
         <p>Click "Add New Plant" to get started!</p>
-      </div>
-
-      <!-- No Results State -->
-      <div id="noResultsState" class="hidden text-center text-gray-500 py-16">
-        <i class="fas fa-search fa-3x text-gray-300"></i>
-        <p class="mt-4 text-xl">No plants match your search.</p>
-        <p>Try adjusting your filters or search terms.</p>
       </div>
     </div>
 
@@ -180,6 +91,7 @@
         <div class="p-6">
           <form id="plantForm">
             <input type="hidden" id="plantId" />
+            <input type="hidden" id="existingImagePath" />
             <div class="space-y-4">
               <!-- Text inputs -->
               <div>
@@ -196,32 +108,6 @@
                   required
                 />
               </div>
-
-              <!-- Plant Type -->
-              <div>
-                <label
-                  for="plantType"
-                  class="block text-sm font-medium text-gray-700 mb-1"
-                  >Plant Type</label
-                >
-                <select
-                  id="plantType"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                >
-                  <option value="">Select Type</option>
-                  <option value="Cactus">Cactus</option>
-                  <option value="Succulent">Succulent</option>
-                  <option value="Houseplant">Houseplant</option>
-                  <option value="Herb">Herb</option>
-                  <option value="Tropical Plant">Tropical Plant</option>
-                  <option value="Flowering Plant">Flowering Plant</option>
-                  <option value="Fern">Fern</option>
-                  <option value="Tree/Shrub">Tree/Shrub</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
               <div>
                 <label
                   for="plantSpecies"
@@ -272,6 +158,9 @@
                 <span id="fileName" class="ml-3 text-sm text-gray-500"
                   >No file chosen</span
                 >
+                <div id="uploadProgress" class="progress-bar mt-2">
+                  <div class="progress-bar-fill"></div>
+                </div>
                 <p id="imageError" class="modal-error">Error message here.</p>
               </div>
               <div class="text-center">
@@ -335,6 +224,6 @@
     </div>
 
     <!-- Custom JavaScript -->
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
   </body>
 </html>

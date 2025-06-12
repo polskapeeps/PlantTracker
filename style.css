@@ -22,7 +22,6 @@ body.modal-open {
 .modal-fade-in {
   animation: fadeIn 0.2s ease-out forwards;
 }
-
 /* Style for the file input button */
 .file-input-button {
   cursor: pointer;
@@ -37,12 +36,10 @@ body.modal-open {
 .file-input-button:hover {
   background-color: #edf2f7;
 }
-
 /* Hide the default file input */
 input[type='file'] {
   display: none;
 }
-
 /* Custom alert/modal error message */
 .modal-error {
   color: #e53e3e; /* red-600 */
@@ -50,189 +47,17 @@ input[type='file'] {
   margin-top: 0.5rem;
   display: none; /* Hidden by default */
 }
-
-/* List View Styles */
-.list-view {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.list-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-  padding: 1rem;
-  transition: transform 0.2s ease;
-}
-
-.list-item:hover {
-  transform: translateX(4px);
-}
-
-.list-item img {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 0.5rem;
-  margin-right: 1rem;
-  flex-shrink: 0;
-}
-
-.list-item-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.list-item-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
-  margin-left: 1rem;
-}
-
-/* Grid View Styles */
-.grid-view {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-/* Group Headers */
-.group-header {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.group-section {
-  margin-bottom: 2rem;
-}
-
-/* Mobile optimizations */
-@media (max-width: 640px) {
-  .list-item {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .list-item img {
-    margin-right: 0;
-    margin-bottom: 1rem;
-  }
-
-  .list-item-actions {
-    margin-left: 0;
-    margin-top: 1rem;
-  }
-
-  .grid-view {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Quick Action Buttons */
-.quick-action-btn {
-  background: #059669;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
+/* Progress bar for uploads */
+.progress-bar {
+  width: 100%;
+  background-color: #e2e8f0;
   border-radius: 0.375rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+  overflow: hidden;
+  display: none; /* Hidden by default */
 }
-
-.quick-action-btn:hover {
-  background: #047857;
-}
-
-.quick-action-btn.secondary {
-  background: #6b7280;
-}
-
-.quick-action-btn.secondary:hover {
-  background: #4b5563;
-}
-
-/* View Toggle Buttons */
-.view-toggle-btn.active {
-  background-color: #059669 !important;
-  color: white !important;
-}
-
-/* Watering Status Indicators */
-.watering-overdue {
-  border-left: 4px solid #dc2626;
-  background: #fef2f2;
-}
-
-.watering-due-soon {
-  border-left: 4px solid #f59e0b;
-  background: #fffbeb;
-}
-
-.watering-good {
-  border-left: 4px solid #059669;
-  background: #f0fdf4;
-}
-
-/* Type badges */
-.type-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.type-cactus {
-  background: #fef3c7;
-  color: #92400e;
-}
-.type-succulent {
-  background: #ddd6fe;
-  color: #5b21b6;
-}
-.type-houseplant {
-  background: #d1fae5;
-  color: #065f46;
-}
-.type-herb {
-  background: #dcfce7;
-  color: #166534;
-}
-.type-tropical {
-  background: #fed7aa;
-  color: #9a3412;
-}
-.type-flowering {
-  background: #fce7f3;
-  color: #be185d;
-}
-.type-fern {
-  background: #e0f2fe;
-  color: #0c4a6e;
-}
-.type-tree {
-  background: #e7e5e4;
-  color: #44403c;
-}
-.type-other {
-  background: #f3f4f6;
-  color: #374151;
+.progress-bar-fill {
+  height: 10px;
+  background-color: #48bb78; /* green-500 */
+  width: 0%;
+  transition: width 0.2s;
 }
