@@ -43,7 +43,6 @@ const firebaseConfig = {
   appId: '1:696840995334:web:ca06037643511a20c8b987',
   measurementId: 'G-WH7NWE0RM2',
 };
-
 // --- DOM Element References ---
 let plantGrid,
   plantModal,
