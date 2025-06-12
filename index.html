@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Cacti & Plant Collection</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome for Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="bg-gray-100 text-gray-800">
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+      <!-- Header -->
+      <header class="text-center mb-8">
+        <h1 class="text-4xl md:text-5xl font-bold text-green-800">
+          My Plant Collection
+        </h1>
+        <p class="text-gray-600 mt-2">
+          A digital garden for your green friends.
+        </p>
+        <p id="userIdDisplay" class="text-xs text-gray-400 mt-2"></p>
+      </header>
+
+      <!-- Controls -->
+      <div class="flex justify-center mb-8">
+        <button
+          id="addPlantBtn"
+          class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-transform transform hover:scale-105"
+        >
+          <i class="fas fa-plus mr-2"></i> Add New Plant
+        </button>
+      </div>
+
+      <!-- Plant Grid -->
+      <div
+        id="plantGrid"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      >
+        <!-- Plant cards will be inserted here by JavaScript -->
+      </div>
+
+      <div id="loadingState" class="text-center text-gray-500 py-16">
+        <i class="fas fa-spinner fa-spin fa-3x"></i>
+        <p class="mt-4">Loading your collection...</p>
+      </div>
+
+      <div id="emptyState" class="hidden text-center text-gray-500 py-16">
+        <i class="fas fa-leaf fa-3x text-green-300"></i>
+        <p class="mt-4 text-xl">Your collection is empty.</p>
+        <p>Click "Add New Plant" to get started!</p>
+      </div>
+    </div>
+
+    <!-- Add/Edit Plant Modal -->
+    <div
+      id="plantModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+    >
+      <div class="modal-fade-in bg-white rounded-lg shadow-2xl w-full max-w-md">
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center p-5 border-b">
+          <h3 id="modalTitle" class="text-2xl font-semibold">
+            Add a New Plant
+          </h3>
+          <button
+            id="closeModalBtn"
+            class="text-gray-400 hover:text-gray-600 text-3xl leading-none"
+          >
+            &times;
+          </button>
+        </div>
+        <!-- Modal Body -->
+        <div class="p-6">
+          <form id="plantForm">
+            <input type="hidden" id="plantId" />
+            <input type="hidden" id="existingImagePath" />
+            <div class="space-y-4">
+              <!-- Text inputs -->
+              <div>
+                <label
+                  for="plantName"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >Plant Name</label
+                >
+                <input
+                  type="text"
+                  id="plantName"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="e.g., Golden Barrel Cactus"
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  for="plantSpecies"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >Species (Optional)</label
+                >
+                <input
+                  type="text"
+                  id="plantSpecies"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="e.g., Echinocactus grusonii"
+                />
+              </div>
+              <div>
+                <label
+                  for="plantNotes"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >Notes</label
+                >
+                <textarea
+                  id="plantNotes"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="e.g., Purchased from local nursery..."
+                ></textarea>
+              </div>
+              <div>
+                <label
+                  for="nextWatering"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >Next Watering Reminder</label
+                >
+                <input
+                  type="date"
+                  id="nextWatering"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <!-- Image Upload Section -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >Image</label
+                >
+                <label for="plantImageFile" class="file-input-button">
+                  <i class="fas fa-upload mr-2"></i> Choose a file
+                </label>
+                <input type="file" id="plantImageFile" accept="image/*" />
+                <span id="fileName" class="ml-3 text-sm text-gray-500"
+                  >No file chosen</span
+                >
+                <div id="uploadProgress" class="progress-bar mt-2">
+                  <div class="progress-bar-fill"></div>
+                </div>
+                <p id="imageError" class="modal-error">Error message here.</p>
+              </div>
+              <div class="text-center">
+                <img
+                  id="imagePreview"
+                  src=""
+                  class="hidden max-h-40 mx-auto rounded-md shadow-sm"
+                />
+              </div>
+            </div>
+          </form>
+        </div>
+        <!-- Modal Footer -->
+        <div class="flex justify-end items-center p-4 bg-gray-50 border-t">
+          <p id="formError" class="modal-error w-full text-left"></p>
+          <button
+            id="cancelBtn"
+            type="button"
+            class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            id="saveBtn"
+            type="submit"
+            form="plantForm"
+            class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700"
+          >
+            Save Plant
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div
+      id="confirmModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50"
+    >
+      <div class="modal-fade-in bg-white rounded-lg shadow-2xl w-full max-w-sm">
+        <div class="p-6 text-center">
+          <p id="confirmMessage" class="text-lg mb-6">Are you sure?</p>
+          <div class="flex justify-center space-x-4">
+            <button
+              id="confirmCancelBtn"
+              class="bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+            <button
+              id="confirmOkBtn"
+              class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
