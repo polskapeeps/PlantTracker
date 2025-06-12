@@ -41,7 +41,7 @@ const firebaseConfig = {
   apiKey: 'AIzaSyBltatQTniTVY0Fj-seLuc3bpO7JhB5sIs',
   authDomain: 'planttracker-355e2.firebaseapp.com',
   projectId: 'planttracker-355e2',
-  storageBucket: 'planttracker-355e2.firebasestorage.app',
+  storageBucket: 'planttracker-355e2.appspot.com',
   messagingSenderId: '696840995334',
   appId: '1:696840995334:web:ca06037643511a20c8b987',
   measurementId: 'G-WH7NWE0RM2',
