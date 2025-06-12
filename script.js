@@ -16,6 +16,8 @@ import {
   signInWithCustomToken,
   signInAnonymously,
   onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import {
   getStorage,
@@ -377,7 +379,7 @@ async function deletePlant(id) {
 }
 
 // --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Assign DOM Elements now that the DOM is loaded
   plantGrid = document.getElementById('plantGrid');
   plantModal = document.getElementById('plantModal');
@@ -451,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
+    await setPersistence(auth, browserLocalPersistence);
     storage = getStorage(app); // Initialize Storage
     setLogLevel('debug');
 
