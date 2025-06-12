@@ -2,6 +2,12 @@
 body {
   font-family: 'Inter', sans-serif;
 }
+
+/* Prevents background scroll when a modal is open */
+body.modal-open {
+  overflow: hidden;
+}
+
 /* Custom animation for the modal */
 @keyframes fadeIn {
   from {

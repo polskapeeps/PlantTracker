@@ -70,9 +70,13 @@
       id="plantModal"
       class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
     >
-      <div class="modal-fade-in bg-white rounded-lg shadow-2xl w-full max-w-md">
+      <div
+        class="modal-fade-in bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto"
+      >
         <!-- Modal Header -->
-        <div class="flex justify-between items-center p-5 border-b">
+        <div
+          class="flex justify-between items-center p-5 border-b sticky top-0 bg-white z-10"
+        >
           <h3 id="modalTitle" class="text-2xl font-semibold">
             Add a New Plant
           </h3>
@@ -170,7 +174,9 @@
           </form>
         </div>
         <!-- Modal Footer -->
-        <div class="flex justify-end items-center p-4 bg-gray-50 border-t">
+        <div
+          class="flex justify-end items-center p-4 bg-gray-50 border-t sticky bottom-0 bg-white z-10"
+        >
           <p id="formError" class="modal-error w-full text-left"></p>
           <button
             id="cancelBtn"
