@@ -289,7 +289,7 @@ async function handleSavePlant(e) {
     imageUrl: existingPlant?.imageUrl || null,
     imagePath: existingPlant?.imagePath || null,
   };
-
+  let uploadedImageRef = null;
   try {
     console.log('Step 1: Checking for image file...');
     if (file) {
@@ -297,6 +297,7 @@ async function handleSavePlant(e) {
       const { downloadURL, imagePath } = await uploadFile(file);
       plantData.imageUrl = downloadURL;
       plantData.imagePath = imagePath;
+      uploadedImageRef = ref(storage, imagePath);
       console.log('Step 3: Image upload successful.');
     } else {
       console.log('Step 1a: No new image file found.');
@@ -332,7 +333,17 @@ async function handleSavePlant(e) {
     toggleModal(false);
   } catch (error) {
     console.error('CRITICAL ERROR during save process: ', error);
-    showModalError(formError, `Error: ${error.message}`);
+    if (uploadedImageRef) {
+      try {
+        await deleteObject(uploadedImageRef);
+        showModalError(formError, 'Save failed. Uploaded file removed.');
+      } catch (cleanupError) {
+        console.error('Failed to delete uploaded file:', cleanupError);
+        showModalError(formError, `Error: ${error.message}`);
+      }
+    } else {
+      showModalError(formError, `Error: ${error.message}`);
+    }
   } finally {
     saveButton.disabled = false;
     saveButton.textContent = 'Save Plant';
