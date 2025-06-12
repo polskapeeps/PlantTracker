@@ -1,405 +1,223 @@
-// --- Firebase SDK Imports ---
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-import {
-  getFirestore,
-  collection,
-  onSnapshot,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  setLogLevel,
-} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
-import {
-  getAuth,
-  signInWithCustomToken,
-  signInAnonymously,
-  onAuthStateChanged,
-} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-import {
-  getStorage,
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js';
-
-// --- App State ---
-let db, auth, storage;
-let userId;
-let currentPlants = [];
-let isAuthReady = false;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'cacti-app-default';
-
-// --- Firebase Configuration ---
-// This will be populated by the environment you are in.
-// For local development, you will need to replace this with your own Firebase config object.
-const firebaseConfig = {
-  apiKey: 'AIzaSyBltatQTniTVY0Fj-seLuc3bpO7JhB5sIs',
-  authDomain: 'planttracker-355e2.firebaseapp.com',
-  databaseURL: 'https://planttracker-355e2-default-rtdb.firebaseio.com',
-  projectId: 'planttracker-355e2',
-  storageBucket: 'planttracker-355e2.firebasestorage.app',
-  messagingSenderId: '696840995334',
-  appId: '1:696840995334:web:ca06037643511a20c8b987',
-  measurementId: 'G-WH7NWE0RM2',
-};
-
-// --- DOM Element References ---
-let plantGrid,
-  plantModal,
-  addPlantBtn,
-  closeModalBtn,
-  cancelBtn,
-  plantForm,
-  imagePreview,
-  plantImageFileInput,
-  fileNameSpan,
-  userIdDisplay,
-  loadingState,
-  emptyState,
-  confirmModal,
-  confirmMessage,
-  confirmCancelBtn,
-  confirmOkBtn,
-  formError,
-  imageError,
-  uploadProgress,
-  progressBarFill;
-
-// --- Core Functions ---
-
-/** Renders the plant cards in the grid */
-function renderPlants(plants) {
-  if (!plantGrid) return;
-  plantGrid.innerHTML = '';
-
-  loadingState.classList.add('hidden');
-  emptyState.classList.toggle('hidden', plants.length > 0);
-
-  plants.forEach((plant) => {
-    const isWateringDue =
-      plant.nextWatering &&
-      new Date(plant.nextWatering).setHours(0, 0, 0, 0) <=
-        new Date().setHours(0, 0, 0, 0);
-    const card = document.createElement('div');
-    card.className = `bg-white rounded-lg shadow-md overflow-hidden transition-transform transform hover:-translate-y-1 ${
-      isWateringDue ? 'border-2 border-red-500' : ''
-    }`;
-    card.innerHTML = `
-            <img src="${
-              plant.imageUrl ||
-              'https://placehold.co/600x400/a0d2a0/333333?text=My+Plant'
-            }" alt="${
-      plant.name
-    }" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/a0d2a0/FF0000?text=Image+Error';">
-            <div class="p-4">
-                <h3 class="text-xl font-bold">${plant.name}</h3>
-                <p class="text-gray-600 text-sm mb-2">${
-                  plant.species || 'N/A'
-                }</p>
-                <p class="text-gray-700 text-sm mb-4 h-12 overflow-y-auto">${
-                  plant.notes || 'No notes.'
-                }</p>
-                <div class="text-sm text-blue-600 font-semibold ${
-                  isWateringDue ? 'text-red-600 animate-pulse' : ''
-                }">
-                   <i class="fas fa-tint mr-1"></i>
-                   Next Watering: ${
-                     plant.nextWatering
-                       ? new Date(plant.nextWatering).toLocaleDateString()
-                       : 'Not set'
-                   }
-                </div>
-            </div>
-            <div class="px-4 py-2 bg-gray-50 flex justify-end space-x-2">
-                <button data-id="${
-                  plant.id
-                }" class="edit-btn text-gray-500 hover:text-blue-600"><i class="fas fa-edit"></i></button>
-                <button data-id="${
-                  plant.id
-                }" class="delete-btn text-gray-500 hover:text-red-600"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
-    plantGrid.appendChild(card);
-  });
-}
-
-/** Shows or hides an error message in the main modal */
-function showModalError(element, message) {
-  if (!element) return;
-  element.textContent = message;
-  element.style.display = message ? 'block' : 'none';
-}
-
-/** Toggles the visibility of the main modal and resets the form */
-function toggleModal(show, plant = null) {
-  if (!plantForm || !plantModal) return;
-  plantForm.reset();
-  imagePreview.src = '';
-  imagePreview.classList.add('hidden');
-  fileNameSpan.textContent = 'No file chosen';
-  document.getElementById('plantId').value = '';
-  document.getElementById('existingImagePath').value = '';
-  showModalError(formError, null);
-  showModalError(imageError, null);
-  uploadProgress.style.display = 'none';
-  progressBarFill.style.width = '0%';
-
-  document.body.classList.toggle('modal-open', show);
-
-  if (show) {
-    document.getElementById('modalTitle').textContent = plant
-      ? 'Edit Plant'
-      : 'Add a New Plant';
-    if (plant) {
-      document.getElementById('plantId').value = plant.id;
-      document.getElementById('plantName').value = plant.name || '';
-      document.getElementById('plantSpecies').value = plant.species || '';
-      document.getElementById('plantNotes').value = plant.notes || '';
-      document.getElementById('nextWatering').value = plant.nextWatering || '';
-      document.getElementById('existingImagePath').value =
-        plant.imagePath || '';
-      if (plant.imageUrl) {
-        imagePreview.src = plant.imageUrl;
-        imagePreview.classList.remove('hidden');
-        fileNameSpan.textContent = 'Current image';
-      }
-    }
-    plantModal.classList.remove('hidden');
-  } else {
-    plantModal.classList.add('hidden');
-  }
-}
-
-/** Shows a confirmation dialog */
-function showConfirmation(message, onConfirm) {
-  confirmMessage.textContent = message;
-  confirmModal.classList.remove('hidden');
-  document.body.classList.add('modal-open');
-  confirmOkBtn.onclick = () => {
-    confirmModal.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    onConfirm();
-  };
-  confirmCancelBtn.onclick = () => {
-    confirmModal.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-  };
-}
-
-/** Uploads a file to Firebase Storage and returns the URL and path */
-function uploadFile(file) {
-  return new Promise((resolve, reject) => {
-    if (!storage || !userId)
-      return reject(new Error('Storage or User not initialized.'));
-
-    const imagePath = `images/${userId}/${Date.now()}-${file.name}`;
-    const storageRef = ref(storage, imagePath);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress =
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        uploadProgress.style.display = 'block';
-        progressBarFill.style.width = progress + '%';
-      },
-      (error) => {
-        console.error('Upload failed:', error);
-        reject(error);
-      },
-      async () => {
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve({ downloadURL, imagePath });
-        } catch (error) {
-          reject(error);
-        }
-      }
-    );
-  });
-}
-
-// --- Firestore & Storage Interaction ---
-
-/** Fetches plants from Firestore in real-time */
-function fetchPlants() {
-  if (!db || !userId) {
-    console.log('Firestore or user not ready, skipping fetch.');
-    return;
-  }
-  console.log(`Setting up listener for user: ${userId}`);
-  const plantsCollection = collection(
-    db,
-    'artifacts',
-    appId,
-    'users',
-    userId,
-    'plants'
-  );
-  const q = query(plantsCollection);
-
-  onSnapshot(
-    q,
-    (snapshot) => {
-      currentPlants = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      currentPlants.sort((a, b) => a.name.localeCompare(b.name));
-      renderPlants(currentPlants);
-    },
-    (error) => {
-      console.error('Error fetching plants: ', error);
-      loadingState.textContent =
-        'Error loading collection. Check Firestore rules.';
-    }
-  );
-}
-
-/** Saves or updates a plant in Firestore */
-async function handleSavePlant(e) {
-  e.preventDefault();
-  if (!db || !userId) {
-    console.error('Save aborted: DB or user not ready.');
-    showModalError(formError, 'Error: App not connected to database.');
-    return;
-  }
-
-  showModalError(formError, null);
-  const saveButton = document.getElementById('saveBtn');
-  saveButton.disabled = true;
-  saveButton.textContent = 'Saving...';
-
-  const plantId = document.getElementById('plantId').value;
-  const file = plantImageFileInput.files[0];
-  const existingPlant = plantId
-    ? currentPlants.find((p) => p.id === plantId)
-    : null;
-
-  let plantData = {
-    name: document.getElementById('plantName').value,
-    species: document.getElementById('plantSpecies').value,
-    notes: document.getElementById('plantNotes').value,
-    nextWatering: document.getElementById('nextWatering').value,
-    imageUrl: existingPlant?.imageUrl || null,
-    imagePath: existingPlant?.imagePath || null,
-  };
-
-  try {
-    console.log('Step 1: Checking for image file...');
-    if (file) {
-      console.log('Step 2: Uploading image to Storage...');
-      const { downloadURL, imagePath } = await uploadFile(file);
-      plantData.imageUrl = downloadURL;
-      plantData.imagePath = imagePath;
-      console.log('Step 3: Image upload successful.');
-    } else {
-      console.log('Step 1a: No new image file found.');
-    }
-
-    const plantsCollection = collection(
-      db,
-      'artifacts',
-      appId,
-      'users',
-      userId,
-      'plants'
-    );
-
-    if (plantId) {
-      console.log('Step 4: Updating existing document in Firestore...');
-      const plantRef = doc(
-        db,
-        'artifacts',
-        appId,
-        'users',
-        userId,
-        'plants',
-        plantId
-      );
-      await updateDoc(plantRef, plantData);
-      console.log('Step 5: Firestore document updated successfully.');
-    } else {
-      console.log('Step 4: Creating new document in Firestore...');
-      await addDoc(plantsCollection, plantData);
-      console.log('Step 5: Firestore document created successfully.');
-    }
-    toggleModal(false);
-  } catch (error) {
-    console.error('CRITICAL ERROR during save process: ', error);
-    showModalError(formError, `Error: ${error.message}`);
-  } finally {
-    saveButton.disabled = false;
-    saveButton.textContent = 'Save Plant';
-  }
-}
-
-/** Deletes a plant and its image */
-async function deletePlant(id) {
-  if (!db || !userId || !id) return;
-
-  const plantToDelete = currentPlants.find((p) => p.id === id);
-  if (!plantToDelete) return;
-
-  showConfirmation('Are you sure you want to delete this plant?', async () => {
-    try {
-      // 1. Delete the image from Storage if it exists
-      if (plantToDelete.imagePath) {
-        const imageRef = ref(storage, plantToDelete.imagePath);
-        try {
-          await deleteObject(imageRef);
-        } catch (storageError) {
-          // Ignore "object-not-found" error, as it means the file is already gone.
-          if (storageError.code !== 'storage/object-not-found') {
-            throw storageError;
-          }
-        }
-      }
-
-      // 2. Delete the document from Firestore
-      const plantRef = doc(
-        db,
-        'artifacts',
-        appId,
-        'users',
-        userId,
-        'plants',
-        id
-      );
-      await deleteDoc(plantRef);
-    } catch (error) {
-      console.error('Error deleting plant: ', error);
-    }
-  });
-}
-
-// --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-  // Assign DOM Elements now that the DOM is loaded
-  plantGrid = document.getElementById('plantGrid');
-  plantModal = document.getElementById('plantModal');
-  addPlantBtn = document.getElementById('addPlantBtn');
-  closeModalBtn = document.getElementById('closeModalBtn');
-  cancelBtn = document.getElementById('cancelBtn');
-  plantForm = document.getElementById('plantForm');
-  imagePreview = document.getElementById('imagePreview');
-  plantImageFileInput = document.getElementById('plantImageFile');
-  fileNameSpan = document.getElementById('fileName');
-  userIdDisplay = document.getElementById('userIdDisplay');
-  loadingState = document.getElementById('loadingState');
-  emptyState = document.getElementById('emptyState');
-  confirmModal = document.getElementById('confirmModal');
-  confirmMessage = document.getElementById('confirmMessage');
-  confirmCancelBtn = document.getElementById('confirmCancelBtn');
-  confirmOkBtn = document.getElementById('confirmOkBtn');
-  formError = document.getElementById('formError');
-  imageError = document.getElementById('imageError');
-  uploadProgress = document.getElementById('uploadProgress');
-  progressBarFill = uploadProgress.querySelector('.progress-bar-fill');
+  // --- DOM Element References ---
+  const plantGrid = document.getElementById('plantGrid');
+  const plantModal = document.getElementById('plantModal');
+  const addPlantBtn = document.getElementById('addPlantBtn');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const plantForm = document.getElementById('plantForm');
+  const imagePreview = document.getElementById('imagePreview');
+  const plantImageFileInput = document.getElementById('plantImageFile');
+  const fileNameSpan = document.getElementById('fileName');
+  const loadingState = document.getElementById('loadingState');
+  const emptyState = document.getElementById('emptyState');
+  const confirmModal = document.getElementById('confirmModal');
+  const confirmMessage = document.getElementById('confirmMessage');
+  const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+  const confirmOkBtn = document.getElementById('confirmOkBtn');
+  const formError = document.getElementById('formError');
+  const imageError = document.getElementById('imageError');
+
+  const STORAGE_KEY = 'myPlantCollection';
+
+  // --- Core Functions ---
+
+  /**
+   * Loads plants from Local Storage.
+   * @returns {Array} An array of plant objects.
+   */
+  const getPlants = () => {
+    const plantsJSON = localStorage.getItem(STORAGE_KEY);
+    try {
+      return plantsJSON ? JSON.parse(plantsJSON) : [];
+    } catch (e) {
+      console.error('Error parsing plants from localStorage', e);
+      return [];
+    }
+  };
+
+  /**
+   * Saves the entire plant array to Local Storage.
+   * @param {Array} plants - The array of plant objects to save.
+   */
+  const savePlants = (plants) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(plants));
+  };
+
+  /**
+   * Renders the plant cards in the grid.
+   */
+  const renderPlants = () => {
+    loadingState.classList.add('hidden');
+    const plants = getPlants();
+    plantGrid.innerHTML = '';
+
+    emptyState.classList.toggle('hidden', plants.length > 0);
+
+    plants.sort((a, b) => a.name.localeCompare(b.name));
+
+    plants.forEach((plant) => {
+      const isWateringDue =
+        plant.nextWatering &&
+        new Date(plant.nextWatering).setHours(0, 0, 0, 0) <=
+          new Date().setHours(0, 0, 0, 0);
+      const card = document.createElement('div');
+      card.className = `bg-white rounded-lg shadow-md overflow-hidden transition-transform transform hover:-translate-y-1 ${
+        isWateringDue ? 'border-2 border-red-500' : ''
+      }`;
+      card.innerHTML = `
+                <img src="${
+                  plant.imageUrl ||
+                  'https://placehold.co/600x400/a0d2a0/333333?text=My+Plant'
+                }" alt="${plant.name}" class="w-full h-48 object-cover">
+                <div class="p-4">
+                    <h3 class="text-xl font-bold">${plant.name}</h3>
+                    <p class="text-gray-600 text-sm mb-2">${
+                      plant.species || 'N/A'
+                    }</p>
+                    <p class="text-gray-700 text-sm mb-4 h-12 overflow-y-auto">${
+                      plant.notes || 'No notes.'
+                    }</p>
+                    <div class="text-sm text-blue-600 font-semibold ${
+                      isWateringDue ? 'text-red-600 animate-pulse' : ''
+                    }">
+                       <i class="fas fa-tint mr-1"></i>
+                       Next Watering: ${
+                         plant.nextWatering
+                           ? new Date(plant.nextWatering).toLocaleDateString()
+                           : 'Not set'
+                       }
+                    </div>
+                </div>
+                <div class="px-4 py-2 bg-gray-50 flex justify-end space-x-2">
+                    <button data-id="${
+                      plant.id
+                    }" class="edit-btn text-gray-500 hover:text-blue-600"><i class="fas fa-edit"></i></button>
+                    <button data-id="${
+                      plant.id
+                    }" class="delete-btn text-gray-500 hover:text-red-600"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+      plantGrid.appendChild(card);
+    });
+  };
+
+  /** Shows or hides an error message in the main modal */
+  const showModalError = (element, message) => {
+    element.textContent = message;
+    element.style.display = message ? 'block' : 'none';
+  };
+
+  /** Converts a file to a Base64 string for storage */
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  /** Toggles the visibility of the main modal and resets the form */
+  const toggleModal = (show, plant = null) => {
+    plantForm.reset();
+    imagePreview.src = '';
+    imagePreview.classList.add('hidden');
+    fileNameSpan.textContent = 'No file chosen';
+    document.getElementById('plantId').value = '';
+    showModalError(formError, null);
+    showModalError(imageError, null);
+
+    document.body.classList.toggle('modal-open', show);
+
+    if (show) {
+      document.getElementById('modalTitle').textContent = plant
+        ? 'Edit Plant'
+        : 'Add a New Plant';
+      if (plant) {
+        document.getElementById('plantId').value = plant.id;
+        document.getElementById('plantName').value = plant.name || '';
+        document.getElementById('plantSpecies').value = plant.species || '';
+        document.getElementById('plantNotes').value = plant.notes || '';
+        document.getElementById('nextWatering').value =
+          plant.nextWatering || '';
+        if (plant.imageUrl) {
+          imagePreview.src = plant.imageUrl;
+          imagePreview.classList.remove('hidden');
+          fileNameSpan.textContent = 'Current image';
+        }
+      }
+      plantModal.classList.remove('hidden');
+    } else {
+      plantModal.classList.add('hidden');
+    }
+  };
+
+  /** Saves or updates a plant */
+  const handleSavePlant = async (e) => {
+    e.preventDefault();
+
+    const saveButton = document.getElementById('saveBtn');
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...';
+
+    const plantId = document.getElementById('plantId').value;
+    const file = plantImageFileInput.files[0];
+    let plants = getPlants();
+    let existingPlant = plantId ? plants.find((p) => p.id === plantId) : null;
+
+    let plantData = {
+      id: existingPlant ? existingPlant.id : Date.now().toString(),
+      name: document.getElementById('plantName').value,
+      species: document.getElementById('plantSpecies').value,
+      notes: document.getElementById('plantNotes').value,
+      nextWatering: document.getElementById('nextWatering').value,
+      imageUrl: existingPlant?.imageUrl || null,
+    };
+
+    try {
+      if (file) {
+        plantData.imageUrl = await fileToBase64(file);
+      }
+
+      if (existingPlant) {
+        // Update existing plant
+        plants = plants.map((p) => (p.id === plantId ? plantData : p));
+      } else {
+        // Add new plant
+        plants.push(plantData);
+      }
+
+      savePlants(plants);
+      renderPlants();
+      toggleModal(false);
+    } catch (error) {
+      console.error('Error saving plant:', error);
+      showModalError(
+        formError,
+        'Could not save plant. Check console for details.'
+      );
+    } finally {
+      saveButton.disabled = false;
+      saveButton.textContent = 'Save Plant';
+    }
+  };
+
+  /** Shows a confirmation dialog */
+  const showConfirmation = (message, onConfirm) => {
+    confirmMessage.textContent = message;
+    confirmModal.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    confirmOkBtn.onclick = () => {
+      confirmModal.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      onConfirm();
+    };
+    confirmCancelBtn.onclick = () => {
+      confirmModal.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+    };
+  };
 
   // --- Event Listeners ---
   addPlantBtn.addEventListener('click', () => toggleModal(true));
@@ -411,9 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showModalError(imageError, null);
     if (plantImageFileInput.files.length > 0) {
       const file = plantImageFileInput.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
-        showModalError(imageError, 'File is too large (max 5MB).');
+      // Generous 4MB limit for Base64 string
+      if (file.size > 4 * 1024 * 1024) {
+        showModalError(imageError, 'File is too large (max 4MB).');
         plantImageFileInput.value = '';
         return;
       }
@@ -437,48 +255,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const id = button.dataset.id;
     if (button.classList.contains('delete-btn')) {
-      deletePlant(id);
+      showConfirmation('Are you sure you want to delete this plant?', () => {
+        let plants = getPlants();
+        plants = plants.filter((p) => p.id !== id);
+        savePlants(plants);
+        renderPlants();
+      });
     }
     if (button.classList.contains('edit-btn')) {
-      const plantToEdit = currentPlants.find((p) => p.id === id);
+      const plants = getPlants();
+      const plantToEdit = plants.find((p) => p.id === id);
       if (plantToEdit) {
         toggleModal(true, plantToEdit);
       }
     }
   });
 
-  // --- Firebase Initialization ---
-  try {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    auth = getAuth(app);
-    storage = getStorage(app); // Initialize Storage
-    setLogLevel('debug');
-
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        userId = user.uid;
-        isAuthReady = true;
-        userIdDisplay.textContent = `User ID: ${userId}`;
-        fetchPlants();
-      } else {
-        try {
-          if (
-            typeof __initial_auth_token !== 'undefined' &&
-            __initial_auth_token
-          ) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } else {
-            await signInAnonymously(auth);
-          }
-        } catch (authError) {
-          console.error('Authentication failed:', authError);
-          loadingState.textContent = 'Could not authenticate. Please refresh.';
-        }
-      }
-    });
-  } catch (e) {
-    console.error('Firebase initialization failed', e);
-    loadingState.textContent = 'Error initializing application. Check console.';
-  }
+  // --- Initial Load ---
+  renderPlants();
 });

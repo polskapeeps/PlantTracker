@@ -30,9 +30,8 @@
           My Plant Collection
         </h1>
         <p class="text-gray-600 mt-2">
-          A digital garden for your green friends.
+          A digital garden for your green friends. (Saved Locally)
         </p>
-        <p id="userIdDisplay" class="text-xs text-gray-400 mt-2"></p>
       </header>
 
       <!-- Controls -->
@@ -53,7 +52,7 @@
         <!-- Plant cards will be inserted here by JavaScript -->
       </div>
 
-      <div id="loadingState" class="text-center text-gray-500 py-16">
+      <div id="loadingState" class="hidden text-center text-gray-500 py-16">
         <i class="fas fa-spinner fa-spin fa-3x"></i>
         <p class="mt-4">Loading your collection...</p>
       </div>
@@ -91,7 +90,6 @@
         <div class="p-6">
           <form id="plantForm">
             <input type="hidden" id="plantId" />
-            <input type="hidden" id="existingImagePath" />
             <div class="space-y-4">
               <!-- Text inputs -->
               <div>
@@ -158,9 +156,6 @@
                 <span id="fileName" class="ml-3 text-sm text-gray-500"
                   >No file chosen</span
                 >
-                <div id="uploadProgress" class="progress-bar mt-2">
-                  <div class="progress-bar-fill"></div>
-                </div>
                 <p id="imageError" class="modal-error">Error message here.</p>
               </div>
               <div class="text-center">
@@ -224,6 +219,6 @@
     </div>
 
     <!-- Custom JavaScript -->
-    <script type="module" src="script.js"></script>
+    <script src="script.js"></script>
   </body>
 </html>
