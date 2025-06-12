@@ -34,13 +34,14 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'cacti-app-default';
 // --- Firebase Configuration ---
 // This will be populated by the environment you are in.
 // For local development, you will need to replace this with your own Firebase config object.
-const firebaseConfig = JSON.parse(
-  typeof __firebase_config !== 'undefined' ? __firebase_config : 'null'
-) || {
-  apiKey: 'mock',
-  authDomain: 'mock.firebaseapp.com',
-  projectId: 'mock-project',
-  storageBucket: 'mock-project.appspot.com',
+const firebaseConfig = {
+  apiKey: 'AIzaSyBltatQTniTVY0Fj-seLuc3bpO7JhB5sIs',
+  authDomain: 'planttracker-355e2.firebaseapp.com',
+  projectId: 'planttracker-355e2',
+  storageBucket: 'planttracker-355e2.firebasestorage.app',
+  messagingSenderId: '696840995334',
+  appId: '1:696840995334:web:ca06037643511a20c8b987',
+  measurementId: 'G-WH7NWE0RM2',
 };
 
 // --- DOM Element References ---
