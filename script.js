@@ -229,10 +229,13 @@ function uploadFile(file) {
 /** Fetches plants from Firestore in real-time */
 function fetchPlants() {
   if (!db || !userId) {
-    console.log('Firestore or user not ready, skipping fetch.');
+    console.log('Firestore or user not ready, retrying in 1 second...');
+    setTimeout(fetchPlants, 1000);
     return;
   }
+
   console.log(`Setting up listener for user: ${userId}`);
+
   const plantsCollection = collection(
     db,
     'artifacts',
@@ -243,22 +246,44 @@ function fetchPlants() {
   );
   const q = query(plantsCollection);
 
-  onSnapshot(
+  // Store the unsubscribe function to clean up if needed
+  const unsubscribe = onSnapshot(
     q,
     (snapshot) => {
+      console.log(`Received ${snapshot.docs.length} plants from Firestore`);
+
       currentPlants = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
+
+      // Ensure all plants have required fields
+      currentPlants = currentPlants.map((plant) => ({
+        ...plant,
+        type: plant.type || 'Other',
+        dateAdded: plant.dateAdded || Date.now(),
+      }));
+
       currentPlants.sort((a, b) => a.name.localeCompare(b.name));
       renderPlants(currentPlants);
+
+      // Hide loading state after first successful load
+      loadingState.classList.add('hidden');
     },
     (error) => {
-      console.error('Error fetching plants: ', error);
-      loadingState.textContent =
-        'Error loading collection. Check Firestore rules.';
+      console.error('Firestore listener error:', error);
+      loadingState.innerHTML = `
+        <i class="fas fa-exclamation-triangle fa-3x text-red-500"></i>
+        <p class="mt-4">Error loading plants: ${error.message}</p>
+        <button onclick="location.reload()" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+          Retry
+        </button>
+      `;
     }
   );
+
+  // Store unsubscribe function globally so we can clean up if needed
+  window.plantsUnsubscribe = unsubscribe;
 }
 
 /** Saves or updates a plant in Firestore */
@@ -272,6 +297,7 @@ async function handleSavePlant(e) {
 
   showModalError(formError, null);
   const saveButton = document.getElementById('saveBtn');
+  const originalText = saveButton.textContent;
   saveButton.disabled = true;
   saveButton.textContent = 'Saving...';
 
@@ -283,25 +309,31 @@ async function handleSavePlant(e) {
 
   let plantData = {
     name: document.getElementById('plantName').value,
+    type: document.getElementById('plantType').value || 'Other', // Add fallback
     species: document.getElementById('plantSpecies').value,
     notes: document.getElementById('plantNotes').value,
     nextWatering: document.getElementById('nextWatering').value,
     imageUrl: existingPlant?.imageUrl || null,
     imagePath: existingPlant?.imagePath || null,
+    dateAdded: existingPlant?.dateAdded || Date.now(), // Add dateAdded
   };
+
   let uploadedImageRef = null;
+
   try {
-    console.log('Step 1: Checking for image file...');
+    // Step 1: Upload image if present
     if (file) {
-      console.log('Step 2: Uploading image to Storage...');
+      console.log('Uploading image...');
+      saveButton.textContent = 'Uploading image...';
       const { downloadURL, imagePath } = await uploadFile(file);
       plantData.imageUrl = downloadURL;
       plantData.imagePath = imagePath;
       uploadedImageRef = ref(storage, imagePath);
-      console.log('Step 3: Image upload successful.');
-    } else {
-      console.log('Step 1a: No new image file found.');
     }
+
+    // Step 2: Save to Firestore
+    console.log('Saving to Firestore...');
+    saveButton.textContent = 'Saving plant...';
 
     const plantsCollection = collection(
       db,
@@ -313,7 +345,6 @@ async function handleSavePlant(e) {
     );
 
     if (plantId) {
-      console.log('Step 4: Updating existing document in Firestore...');
       const plantRef = doc(
         db,
         'artifacts',
@@ -324,29 +355,32 @@ async function handleSavePlant(e) {
         plantId
       );
       await updateDoc(plantRef, plantData);
-      console.log('Step 5: Firestore document updated successfully.');
     } else {
-      console.log('Step 4: Creating new document in Firestore...');
       await addDoc(plantsCollection, plantData);
-      console.log('Step 5: Firestore document created successfully.');
     }
+
+    console.log('Save successful, closing modal...');
+
+    // Clear form and close modal - this should always happen on success
     toggleModal(false);
   } catch (error) {
-    console.error('CRITICAL ERROR during save process: ', error);
+    console.error('Save error:', error);
+
+    // Clean up uploaded file if Firestore save failed
     if (uploadedImageRef) {
       try {
         await deleteObject(uploadedImageRef);
-        showModalError(formError, 'Save failed. Uploaded file removed.');
+        console.log('Cleaned up uploaded file after error');
       } catch (cleanupError) {
-        console.error('Failed to delete uploaded file:', cleanupError);
-        showModalError(formError, `Error: ${error.message}`);
+        console.error('Failed to cleanup uploaded file:', cleanupError);
       }
-    } else {
-      showModalError(formError, `Error: ${error.message}`);
     }
+
+    showModalError(formError, `Save failed: ${error.message}`);
   } finally {
+    // Always restore button state
     saveButton.disabled = false;
-    saveButton.textContent = 'Save Plant';
+    saveButton.textContent = originalText;
   }
 }
 
@@ -468,25 +502,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     storage = getStorage(app); // Initialize Storage
     setLogLevel('debug');
 
+    // Improve the auth state change handler
     onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user ? 'signed in' : 'signed out');
+
       if (user) {
         userId = user.uid;
         isAuthReady = true;
         userIdDisplay.textContent = `User ID: ${userId}`;
-        fetchPlants();
+
+        // Add a small delay to ensure everything is ready
+        setTimeout(() => {
+          console.log('Setting up plants listener...');
+          fetchPlants();
+        }, 100);
       } else {
+        console.log('No user, attempting to sign in...');
         try {
           if (
             typeof __initial_auth_token !== 'undefined' &&
             __initial_auth_token
           ) {
+            console.log('Using custom token...');
             await signInWithCustomToken(auth, __initial_auth_token);
           } else {
+            console.log('Signing in anonymously...');
             await signInAnonymously(auth);
           }
         } catch (authError) {
           console.error('Authentication failed:', authError);
-          loadingState.textContent = 'Could not authenticate. Please refresh.';
+          loadingState.textContent =
+            'Authentication failed. Please refresh the page.';
         }
       }
     });
