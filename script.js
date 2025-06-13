@@ -193,31 +193,45 @@ function showConfirmation(message, onConfirm) {
 /** Uploads a file to Firebase Storage and returns the URL and path */
 function uploadFile(file) {
   return new Promise((resolve, reject) => {
-    if (!storage || !userId)
+    if (!storage || !userId) {
       return reject(new Error('Storage or User not initialized.'));
+    }
+
+    // Add file validation
+    if (file.size > 5 * 1024 * 1024) {
+      return reject(new Error('File too large (max 5MB)'));
+    }
 
     const imagePath = `images/${userId}/${Date.now()}-${file.name}`;
     const storageRef = ref(storage, imagePath);
     const uploadTask = uploadBytesResumable(storageRef, file);
+
+    // Reset progress bar
+    uploadProgress.style.display = 'block';
+    progressBarFill.style.width = '0%';
 
     uploadTask.on(
       'state_changed',
       (snapshot) => {
         const progress =
           (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        uploadProgress.style.display = 'block';
         progressBarFill.style.width = progress + '%';
+        console.log(`Upload progress: ${progress.toFixed(1)}%`);
       },
       (error) => {
         console.error('Upload failed:', error);
-        reject(error);
+        uploadProgress.style.display = 'none';
+        reject(new Error(`Upload failed: ${error.message}`));
       },
       async () => {
         try {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          uploadProgress.style.display = 'none';
+          console.log('Upload completed successfully');
           resolve({ downloadURL, imagePath });
         } catch (error) {
-          reject(error);
+          uploadProgress.style.display = 'none';
+          reject(new Error(`Failed to get download URL: ${error.message}`));
         }
       }
     );
